@@ -7,6 +7,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json packages/core/
+COPY packages/mcp-server/package.json packages/mcp-server/
 COPY apps/api/package.json apps/api/
 RUN pnpm install --frozen-lockfile
 

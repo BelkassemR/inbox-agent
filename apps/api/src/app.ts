@@ -3,6 +3,7 @@ import type { Config, Db, InboundRequest, Logger } from "@inbox/core";
 import { apiKeyAuth } from "./auth.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { intakeRoutes } from "./routes/intake.ts";
+import { mcpRoutes } from "./routes/mcp.ts";
 import { requestRoutes } from "./routes/requests.ts";
 
 export interface AppDeps {
@@ -52,6 +53,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(async (scope) => {
     scope.addHook("onRequest", apiKeyAuth(deps.config.API_KEYS));
     await scope.register(requestRoutes, { db: deps.db });
+    await scope.register(mcpRoutes, { db: deps.db });
   });
 
   return app;
