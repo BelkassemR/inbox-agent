@@ -134,14 +134,15 @@ export async function transitionStatus(
   id: string,
   from: RequestStatus[],
   to: RequestStatus,
+  /** `error: undefined` keeps the current error, `null` clears it. */
   extra: { error?: string | null } = {},
 ): Promise<InboundRequest | null> {
   const res = await db.query<RequestRow>(
     `UPDATE requests
-        SET status = $3, error = COALESCE($4, error), updated_at = now()
+        SET status = $3, error = CASE WHEN $5 THEN $4 ELSE error END, updated_at = now()
       WHERE id = $1 AND status = ANY($2::text[])
       RETURNING *`,
-    [id, from, to, extra.error ?? null],
+    [id, from, to, extra.error ?? null, extra.error !== undefined],
   );
   return res.rows[0] ? toRequest(res.rows[0]) : null;
 }
