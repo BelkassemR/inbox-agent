@@ -27,7 +27,7 @@ export function summarize(r: InboundRequest) {
   return { ...rest, preview: body.slice(0, 280) };
 }
 
-export async function requestRoutes(app: FastifyInstance, opts: { db: Db }) {
+export async function requestRoutes(app: FastifyInstance, opts: { db: Db; queueDepth?: () => Promise<unknown> }) {
   app.get("/v1/requests", async (req, reply) => {
     const q = ListQuery.safeParse(req.query);
     if (!q.success) return reply.code(400).send({ error: "invalid query", issues: q.error.issues });
@@ -49,5 +49,8 @@ export async function requestRoutes(app: FastifyInstance, opts: { db: Db }) {
     return { ...request, audit: await auditForRequest(opts.db, request.id) };
   });
 
-  app.get("/v1/stats", async () => ({ byStatus: await countByStatus(opts.db) }));
+  app.get("/v1/stats", async () => ({
+    byStatus: await countByStatus(opts.db),
+    queues: opts.queueDepth ? await opts.queueDepth().catch(() => null) : null,
+  }));
 }

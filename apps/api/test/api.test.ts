@@ -102,3 +102,23 @@ describe("hardening", () => {
     await limited.close();
   });
 });
+
+describe("resilience and metrics", () => {
+  it("still accepts intake when the hand-off to the queue fails", async () => {
+    const flaky = await makeApp(db, { onNewRequest: async () => { throw new Error("redis down"); } });
+    const res = await flaky.inject(signedIntake({ ...samplePayload, externalId: "redis-down" }));
+    expect(res.statusCode).toBe(202);
+    await flaky.close();
+  });
+
+  it("exposes Prometheus metrics behind auth", async () => {
+    const { createApiMetrics } = await import("../src/metrics.ts");
+    const metered = await makeApp(db, { metrics: createApiMetrics() });
+    await metered.inject(signedIntake({ ...samplePayload, externalId: "m1" }));
+    expect((await metered.inject({ method: "GET", url: "/metrics" })).statusCode).toBe(401);
+    const body = (await metered.inject({ method: "GET", url: "/metrics", headers: auth })).body;
+    expect(body).toContain('inbox_intake_total{result="accepted"} 1');
+    expect(body).toContain('route="/v1/intake"');
+    await metered.close();
+  });
+});

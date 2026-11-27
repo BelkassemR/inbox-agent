@@ -31,5 +31,20 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
 
+  worker:
+    build: .
+    command: ["node", "--import", "tsx", "apps/worker/src/main.ts"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://inbox:inbox@postgres:5432/inbox_agent
+      REDIS_URL: redis://redis:6379
+      WORKER_CONCURRENCY: "8"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    # Agent runs are I/O-bound; add replicas to scale throughput.
+    deploy:
+      replicas: 2
+
 volumes:
   pgdata:
