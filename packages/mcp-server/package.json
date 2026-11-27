@@ -1,0 +1,14 @@
+{
+  "name": "@inbox/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "bin": { "inbox-mcp": "./src/stdio.ts" },
+  "scripts": { "start": "tsx src/stdio.ts" },
+  "dependencies": {
+    "@inbox/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
+}
