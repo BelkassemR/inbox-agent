@@ -6,7 +6,7 @@ export function createLLM(config: Pick<Config, "LLM_PROVIDER" | "ANTHROPIC_API_K
   if (config.LLM_PROVIDER === "anthropic") {
     return new AnthropicLLM({ apiKey: config.ANTHROPIC_API_KEY || undefined, model: config.AGENT_MODEL, effort: config.AGENT_EFFORT });
   }
-  return new ScriptedLLM();
+  return new ScriptedLLM({ latencyMs: Number(process.env.SCRIPTED_LATENCY_MS ?? 0) });
 }
 
 export const DEFAULT_BUSINESS = { artistName: process.env.ARTIST_NAME ?? "NOVA", teamLanguage: "Dutch" };
