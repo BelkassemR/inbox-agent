@@ -7,3 +7,4 @@ export * from "./submit.ts";
 export { ScriptedLLM } from "./scripted/scripted-llm.ts";
 export * from "./triage.ts";
 export * from "./factory.ts";
+export * from "./guards.ts";
