@@ -11,6 +11,9 @@
     "dev": "tsx watch src/main.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.3.0",
     "@inbox/core": "workspace:*",
     "@inbox/mcp-server": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.32.2",

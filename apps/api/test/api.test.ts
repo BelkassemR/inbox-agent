@@ -81,3 +81,24 @@ describe("health", () => {
     expect((await app.inject({ method: "GET", url: "/readyz" })).statusCode).toBe(200);
   });
 });
+
+describe("hardening", () => {
+  it("sets security headers", async () => {
+    const res = await app.inject({ method: "GET", url: "/healthz" });
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["content-security-policy"]).toContain("default-src 'none'");
+  });
+
+  it("does not allow arbitrary browser origins", async () => {
+    const res = await app.inject({ method: "OPTIONS", url: "/v1/requests", headers: { origin: "https://evil.example", "access-control-request-method": "GET" } });
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("rate limits clients", async () => {
+    const limited = await makeApp(db, { config: { API_KEYS: ["x".repeat(20)], WEBHOOK_SECRET: "y".repeat(20), RATE_LIMIT_PER_MINUTE: 3 } });
+    const codes = [];
+    for (let i = 0; i < 5; i++) codes.push((await limited.inject({ method: "GET", url: "/v1/requests" })).statusCode);
+    expect(codes).toEqual([401, 401, 401, 429, 429]);
+    await limited.close();
+  });
+});
