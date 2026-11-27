@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@inbox/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@inbox/mcp-server':
+        specifier: workspace:*
+        version: link:packages/mcp-server
     devDependencies:
       '@types/autocannon':
         specifier: ^7.12.7
