@@ -11,7 +11,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "tsx packages/core/src/db/migrate-cli.ts",
-    "dev:api": "tsx watch apps/api/src/main.ts"
+    "dev:api": "tsx watch apps/api/src/main.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "demo": "tsx scripts/demo.ts",
+    "dev:worker": "tsx watch apps/worker/src/main.ts",
+    "dev:dashboard": "pnpm --filter @inbox/dashboard dev",
+    "loadtest": "tsx loadtest/intake.ts",
+    "mcp": "pnpm --silent --filter @inbox/mcp-server start"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.7",
@@ -25,5 +31,9 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "dependencies": {
+    "@inbox/core": "workspace:*",
+    "@inbox/mcp-server": "workspace:*"
   }
 }

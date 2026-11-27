@@ -93,7 +93,7 @@ export function classify(text: string): { category: Kind; eventType: string | nu
   if (/(crypto|bitcoin|wire transfer|gift card|click here|verify your account|lottery|winnaar van)/.test(t)) return { category: "spam", eventType: null };
   if (/(festival)/.test(t)) return { category: "booking", eventType: "festival" };
   if (/(club|clubshow|club show|nightclub)/.test(t)) return { category: "booking", eventType: "club_show" };
-  if (/(bruiloft|wedding|verjaardag|birthday|bedrijfsfeest|company party|private event|personeelsfeest)/.test(t)) return { category: "booking", eventType: "private_event" };
+  if (/(bruiloft|wedding|mariage|anniversaire|verjaardag|birthday|bedrijfsfeest|company party|private event|soirée privée|personeelsfeest)/.test(t)) return { category: "booking", eventType: "private_event" };
   if (/(boeken|booking|book you|optreden|show|performance|concert)/.test(t)) return { category: "booking", eventType: "club_show" };
   if (/(campagne|campaign|brand|merk|sponsor|endorsement|ambassador)/.test(t)) return { category: "collaboration", eventType: "brand_deal" };
   if (/(feature|collab|samenwerking|samenwerken|track|remix)/.test(t)) return { category: "collaboration", eventType: "feature" };

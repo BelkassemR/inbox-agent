@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "packages/core" }, { "path": "apps/api" }, { "path": "packages/mcp-server" }, { "path": "packages/agent" }, { "path": "packages/queue" }, { "path": "apps/worker" }]
+  "references": [{ "path": "packages/core" }, { "path": "apps/api" }, { "path": "packages/mcp-server" }, { "path": "packages/agent" }, { "path": "packages/queue" }, { "path": "apps/worker" }, { "path": "scripts" }]
 }
