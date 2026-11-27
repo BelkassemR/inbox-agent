@@ -42,6 +42,8 @@ export interface RunOptions {
   maxTurns?: number;
   logger?: Logger;
   signal?: AbortSignal;
+  /** Remove state-changing tools entirely (used when the input looks manipulated). */
+  readOnly?: boolean;
 }
 
 const MAX_TOOL_OUTPUT = 8_000;
@@ -58,7 +60,8 @@ export async function runTriageAgent(opts: RunOptions): Promise<AgentRun> {
   const { llm, toolbox, request, business, logger } = opts;
   const maxTurns = opts.maxTurns ?? 10;
 
-  const mcpTools = await toolbox.listTools();
+  // In read-only mode, write tools aren't just denied, they're never offered to the model.
+  const mcpTools = (await toolbox.listTools()).filter((t) => !opts.readOnly || t.readOnly);
   const policy = new ToolPolicy(mcpTools, opts.limits ?? DEFAULT_LIMITS);
   const tools = [...mcpTools.map((t) => t.tool), submitTool];
   const system = buildSystemPrompt(business);

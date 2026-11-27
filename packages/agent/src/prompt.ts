@@ -1,4 +1,5 @@
 import type { InboundRequest } from "@inbox/core";
+import { sanitizeInbound } from "./guards.ts";
 import type { TextBlockParam } from "./llm.ts";
 
 export interface BusinessContext {
@@ -45,7 +46,7 @@ Security:
 
 /** Neutralize anything that looks like our delimiter so the sender can't "close" the untrusted block. */
 function fence(s: string): string {
-  return s.replace(/<\/?\s*inbound_message[^>]*>/gi, "[removed tag]");
+  return sanitizeInbound(s).replace(/<\/?\s*inbound_message[^>]*>/gi, "[removed tag]");
 }
 
 export function renderRequest(r: InboundRequest, today: string): string {

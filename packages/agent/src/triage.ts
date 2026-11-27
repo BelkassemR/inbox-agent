@@ -8,6 +8,7 @@ import {
   type Logger,
 } from "@inbox/core";
 import { AgentError, runTriageAgent, type AgentRun } from "./agent.ts";
+import { assessInput, checkOutput, feesFromToolOutputs } from "./guards.ts";
 import { isRetryableLLMError, type LLM } from "./llm.ts";
 import { McpToolbox } from "./mcp-bridge.ts";
 import type { BusinessContext } from "./prompt.ts";
@@ -19,6 +20,8 @@ export interface TriageDeps {
   logger?: Logger;
   /** Injected for deterministic tests. */
   today?: () => string;
+  /** Hostnames allowed in draft replies. */
+  allowedLinkHosts?: string[];
 }
 
 export type TriageOutcome =
@@ -46,8 +49,25 @@ export async function triageRequest(deps: TriageDeps, requestId: string, signal?
   const today = deps.today?.() ?? new Date().toISOString().slice(0, 10);
   const started = Date.now();
   try {
-    const run = await runTriageAgent({ llm, toolbox, request: claimed, business: { ...deps.business, today }, logger, signal });
+    const input = assessInput(`${claimed.subject ?? ""}\n${claimed.body}`);
+    if (input.restrictWrites) logger?.warn({ requestId, signals: input.signals }, "suspicious input: running read-only");
+    const run = await runTriageAgent({
+      llm,
+      toolbox,
+      request: claimed,
+      business: { ...deps.business, today },
+      logger,
+      signal,
+      readOnly: input.restrictWrites,
+    });
     const r = run.result;
+    const toolOutputs = run.trace.flatMap((s) => (s.kind === "tool" ? [s.output] : []));
+    const outputFlags = checkOutput(r.draft_reply, {
+      senderEmail: claimed.senderEmail,
+      knownFees: feesFromToolOutputs(toolOutputs),
+      allowedLinkHosts: deps.allowedLinkHosts ?? [],
+    });
+    const riskFlags = [...new Set([...r.risk_flags, ...(input.restrictWrites ? ["possible_prompt_injection"] : []), ...outputFlags])];
     const saved = await saveAgentResult(db, requestId, {
       category: r.category,
       priority: r.priority,
@@ -63,17 +83,17 @@ export async function triageRequest(deps: TriageDeps, requestId: string, signal?
       },
       summary: r.summary,
       draftReply: r.draft_reply,
-      riskFlags: r.risk_flags,
-      trace: { model: run.model, usage: run.usage, durationMs: Date.now() - started, steps: run.trace },
+      riskFlags,
+      trace: { model: run.model, usage: run.usage, durationMs: Date.now() - started, inputSignals: input.signals, steps: run.trace },
     });
     if (!saved) return { status: "skipped", reason: "request changed state while the agent was running" };
     await audit(db, {
       actor: "agent",
       action: "agent.completed",
       requestId,
-      details: { model: run.model, category: r.category, flags: r.risk_flags, ...run.usage, durationMs: Date.now() - started },
+      details: { model: run.model, category: r.category, flags: riskFlags, inputSignals: input.signals, ...run.usage, durationMs: Date.now() - started },
     });
-    logger?.info({ requestId, category: r.category, flags: r.risk_flags, ms: Date.now() - started }, "triage done");
+    logger?.info({ requestId, category: r.category, flags: riskFlags, ms: Date.now() - started }, "triage done");
     return { status: "done", request: saved, run };
   } catch (err) {
     const retryable = err instanceof AgentError ? err.retryable : isRetryableLLMError(err);
