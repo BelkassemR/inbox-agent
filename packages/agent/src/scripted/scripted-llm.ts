@@ -166,6 +166,11 @@ const REPLIES = {
   },
 };
 
+const CATEGORY_NL: Record<string, string> = { booking: "Boekings", collaboration: "Samenwerkings", press: "Pers", fan: "Fan", spam: "Spam", other: "Overige " };
+const LOCALE = { nl: "nl-NL", en: "en-GB", fr: "fr-FR" } as const;
+const fmtDate = (iso: string, lang: keyof typeof LOCALE) =>
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString(LOCALE[lang], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
 function buildSubmission(state: State): SubmitInput {
   const r = state.request;
   const L = REPLIES[r.language];
@@ -187,8 +192,8 @@ function buildSubmission(state: State): SubmitInput {
   if (r.category !== "spam" && !r.injection) {
     const parts = [L.hi(r.senderName.split(" ")[0] ?? r.senderName), "", L.thanks];
     if (r.category === "booking") {
-      if (r.date && dateFree === true) parts.push(L.free(r.date));
-      if (r.date && dateFree === false) parts.push(L.busy(r.date));
+      if (r.date && dateFree === true) parts.push(L.free(fmtDate(r.date, r.language)));
+      if (r.date && dateFree === false) parts.push(L.busy(fmtDate(r.date, r.language)));
       if (missing.length) parts.push(L.missing(missing.map((f) => L.fields[f]).join(", ")));
       parts.push(flags.includes("budget_below_minimum") ? L.budget : L.confirm);
     } else if (r.category === "collaboration") parts.push(L.collab);
@@ -202,7 +207,7 @@ function buildSubmission(state: State): SubmitInput {
   const did = [hold?.placed ? `optie geplaatst op ${r.date}` : null, state.results.crm_upsert_contact?.saved ? "contact opgeslagen in CRM" : null].filter(Boolean);
   const summary = r.injection
     ? "Bericht bevat instructies gericht aan de assistent (mogelijke prompt injection); niets uitgevoerd."
-    : `${cap(r.category)}-aanvraag van ${r.senderName}${r.city ? ` (${r.city})` : ""}${r.date ? ` voor ${r.date}` : ""}${r.budget !== null ? `, budget €${r.budget}` : ""}.${did.length ? ` ${cap(did.join(", "))}.` : ""}`;
+    : `${CATEGORY_NL[r.category]}aanvraag van ${r.senderName}${r.city ? ` (${r.city})` : ""}${r.date ? ` voor ${r.date}` : ""}${r.budget !== null ? `, budget €${r.budget}` : ""}.${did.length ? ` ${cap(did.join(", "))}.` : ""}`;
 
   const soon = r.date ? (Date.parse(r.date) - Date.parse(state.today)) / 86_400_000 < 30 : false;
   return {
