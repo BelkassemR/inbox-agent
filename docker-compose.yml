@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inbox
+      POSTGRES_PASSWORD: inbox
+      POSTGRES_DB: inbox_agent
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inbox"]
+      interval: 2s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 20
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://inbox:inbox@postgres:5432/inbox_agent
+      REDIS_URL: redis://redis:6379
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
