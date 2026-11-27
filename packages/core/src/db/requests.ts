@@ -194,3 +194,12 @@ export async function requestsBySender(db: Queryable, email: string, limit = 10)
   );
   return res.rows.map(toRequest);
 }
+
+/** Requests stuck in `status` for longer than `olderThanSeconds` (crash recovery, missed enqueues). */
+export async function findStale(db: Queryable, status: RequestStatus, olderThanSeconds: number, limit = 100): Promise<string[]> {
+  const res = await db.query<{ id: string }>(
+    `SELECT id FROM requests WHERE status = $1 AND updated_at < now() - make_interval(secs => $2) ORDER BY updated_at LIMIT $3`,
+    [status, olderThanSeconds, limit],
+  );
+  return res.rows.map((r) => r.id);
+}
