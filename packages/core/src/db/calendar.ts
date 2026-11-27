@@ -84,3 +84,9 @@ export async function createHold(
   });
   return { ok: true, event, created: true };
 }
+
+/** Remove tentative holds placed for a request (e.g. when the team rejects it). Confirmed events are never touched. */
+export async function releaseHolds(db: Queryable, requestId: string): Promise<number> {
+  const res = await db.query("DELETE FROM calendar_events WHERE request_id = $1 AND status = 'tentative'", [requestId]);
+  return res.rowCount ?? 0;
+}

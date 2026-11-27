@@ -5,12 +5,14 @@ import { healthRoutes } from "./routes/health.ts";
 import { intakeRoutes } from "./routes/intake.ts";
 import { mcpRoutes } from "./routes/mcp.ts";
 import { requestRoutes } from "./routes/requests.ts";
+import { reviewRoutes } from "./routes/review.ts";
 
 export interface AppDeps {
   config: Pick<Config, "API_KEYS" | "WEBHOOK_SECRET">;
   db: Db;
   logger?: Logger;
   onNewRequest?: (request: InboundRequest) => Promise<void>;
+  onApproved?: (request: InboundRequest) => Promise<void>;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -53,6 +55,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(async (scope) => {
     scope.addHook("onRequest", apiKeyAuth(deps.config.API_KEYS));
     await scope.register(requestRoutes, { db: deps.db });
+    await scope.register(reviewRoutes, { db: deps.db, onApproved: deps.onApproved, onRetry: deps.onNewRequest });
     await scope.register(mcpRoutes, { db: deps.db });
   });
 
