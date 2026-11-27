@@ -12,6 +12,10 @@ const ConfigSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   API_KEYS: csv.pipe(z.array(z.string().min(16, "API keys must be at least 16 characters")).min(1)),
   WEBHOOK_SECRET: z.string().min(16, "WEBHOOK_SECRET must be at least 16 characters"),
+  /** Origins allowed to call the API from a browser (the dashboard). */
+  CORS_ORIGINS: csv.default([]),
+  /** Requests per minute per client IP on public endpoints. */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
   LLM_PROVIDER: z.enum(["anthropic", "scripted"]).default("scripted"),
   ANTHROPIC_API_KEY: z.string().optional(),
   AGENT_MODEL: z.string().default("claude-opus-5-5"),

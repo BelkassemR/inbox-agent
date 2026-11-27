@@ -1,4 +1,7 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import type { Config, Db, InboundRequest, Logger } from "@inbox/core";
 import { apiKeyAuth } from "./auth.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -8,7 +11,7 @@ import { requestRoutes } from "./routes/requests.ts";
 import { reviewRoutes } from "./routes/review.ts";
 
 export interface AppDeps {
-  config: Pick<Config, "API_KEYS" | "WEBHOOK_SECRET">;
+  config: Pick<Config, "API_KEYS" | "WEBHOOK_SECRET"> & Partial<Pick<Config, "CORS_ORIGINS" | "RATE_LIMIT_PER_MINUTE">>;
   db: Db;
   logger?: Logger;
   onNewRequest?: (request: InboundRequest) => Promise<void>;
@@ -43,6 +46,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     // Never leak internals (stack traces, SQL) to clients.
     reply.code(status).send({ error: status >= 500 ? "internal error" : err.message });
   });
+
+  // Security headers. The API serves JSON only, so the strictest CSP is fine.
+  await app.register(helmet, { contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } } });
+  // Browsers may only call the API from configured dashboard origins.
+  await app.register(cors, { origin: deps.config.CORS_ORIGINS ?? [], methods: ["GET", "POST"], allowedHeaders: ["authorization", "content-type"] });
+  // Per-client rate limit, as a root onRequest hook so it runs before auth: failed
+  // API-key attempts count too, which slows down key guessing.
+  await app.register(rateLimit, { global: false });
+  app.addHook(
+    "onRequest",
+    app.rateLimit({
+      max: deps.config.RATE_LIMIT_PER_MINUTE ?? 120,
+      timeWindow: "1 minute",
+      allowList: (req) => req.url === "/healthz" || req.url === "/readyz",
+    }),
+  );
 
   await app.register(healthRoutes, { db: deps.db });
   await app.register(intakeRoutes, {
