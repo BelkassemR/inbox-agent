@@ -14,7 +14,11 @@ export class ScriptedLLM implements LLM {
   readonly name = "scripted";
   private seq = 0;
 
+  /** `latencyMs` simulates model response time, for realistic load tests. */
+  constructor(private readonly opts: { latencyMs?: number } = {}) {}
+
   async createTurn({ messages }: TurnParams): Promise<Message> {
+    if (this.opts.latencyMs) await new Promise((r) => setTimeout(r, this.opts.latencyMs));
     const state = readState(messages);
     const r = state.request;
     const turn = messages.filter((m) => m.role === "assistant").length;

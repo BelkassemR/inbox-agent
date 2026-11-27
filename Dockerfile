@@ -8,7 +8,10 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json packages/core/
 COPY packages/mcp-server/package.json packages/mcp-server/
+COPY packages/agent/package.json packages/agent/
+COPY packages/queue/package.json packages/queue/
 COPY apps/api/package.json apps/api/
+COPY apps/worker/package.json apps/worker/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS runtime

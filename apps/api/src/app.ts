@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { Config, Db, InboundRequest, Logger } from "@inbox/core";
 import { apiKeyAuth } from "./auth.ts";
+import { instrument, type ApiMetrics } from "./metrics.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { intakeRoutes } from "./routes/intake.ts";
 import { mcpRoutes } from "./routes/mcp.ts";
@@ -16,6 +17,8 @@ export interface AppDeps {
   logger?: Logger;
   onNewRequest?: (request: InboundRequest) => Promise<void>;
   onApproved?: (request: InboundRequest) => Promise<void>;
+  metrics?: ApiMetrics;
+  queueDepth?: () => Promise<unknown>;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -63,17 +66,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }),
   );
 
+  if (deps.metrics) instrument(app, deps.metrics);
+
   await app.register(healthRoutes, { db: deps.db });
   await app.register(intakeRoutes, {
     db: deps.db,
     webhookSecret: deps.config.WEBHOOK_SECRET,
     onNewRequest: deps.onNewRequest,
+    onResult: (result) => deps.metrics?.intake.inc({ result }),
   });
 
   // Everything registered in this scope requires an operator API key.
   await app.register(async (scope) => {
     scope.addHook("onRequest", apiKeyAuth(deps.config.API_KEYS));
-    await scope.register(requestRoutes, { db: deps.db });
+    await scope.register(requestRoutes, { db: deps.db, queueDepth: deps.queueDepth });
+    if (deps.metrics) {
+      const registry = deps.metrics.registry;
+      scope.get("/metrics", async (_req, reply) => reply.type(registry.contentType).send(await registry.metrics()));
+    }
     await scope.register(reviewRoutes, { db: deps.db, onApproved: deps.onApproved, onRetry: deps.onNewRequest });
     await scope.register(mcpRoutes, { db: deps.db });
   });
