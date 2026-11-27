@@ -4,7 +4,9 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { Config, Db, InboundRequest, Logger } from "@inbox/core";
 import { apiKeyAuth } from "./auth.ts";
+import type { RequestEventBus } from "./events.ts";
 import { instrument, type ApiMetrics } from "./metrics.ts";
+import { eventRoutes } from "./routes/events.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { intakeRoutes } from "./routes/intake.ts";
 import { mcpRoutes } from "./routes/mcp.ts";
@@ -19,6 +21,7 @@ export interface AppDeps {
   onApproved?: (request: InboundRequest) => Promise<void>;
   metrics?: ApiMetrics;
   queueDepth?: () => Promise<unknown>;
+  events?: RequestEventBus;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -86,6 +89,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
     await scope.register(reviewRoutes, { db: deps.db, onApproved: deps.onApproved, onRetry: deps.onNewRequest });
     await scope.register(mcpRoutes, { db: deps.db });
+    if (deps.events) await scope.register(eventRoutes, { bus: deps.events });
   });
 
   return app;

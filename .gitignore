@@ -9,3 +9,4 @@ coverage/
 .pgdata/
 loadtest/results/*.json
 *.tsbuildinfo
+apps/dashboard/dist
